@@ -35,7 +35,7 @@ var STORE_SIZE = process.env.BROBBOT_QUOTE_STORE_SIZE ? parseInt(process.env.BRO
 var INIT_TIMEOUT = process.env.BROBBOT_QUOTE_INIT_TIMEOUT ? parseInt(process.env.BROBBOT_QUOTE_INIT_TIMEOUT) : 10000;
 var STORE_PREFIX = 'user:';
 var CACHE_PREFIX = 'cache-user:';
-var CACHE_KEYS = 'cache-keys';
+var CACHE_KEYS_PREFIX = 'cache-keys:';
 
 function uniqueStems(text) {
   return _.unique(stemmer.tokenizeAndStem(text));
