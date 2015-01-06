@@ -110,8 +110,8 @@ function start(robot) {
     var stems = uniqueStems(text);
 
     if (users) {
-      keys = Q(_.map(users, function(userId) {
-        return keyPrefix + userId;
+      keys = Q(_.map(users, function(user) {
+        return keyPrefix + user.id;
       }));
     }
     else {
@@ -161,7 +161,7 @@ function start(robot) {
 
   function storeMessage(msg) {
     return ensureStoreSize(msg.userId, STORE_SIZE - 1).then(function() {
-      return robot.brain.hset(STORE_PREFIX + msg.userId, msg.key, msg.text);
+      return robot.brain.hset(STORE_PREFIX + msg.userId, msg.key, msg);
     });
   }
 
@@ -172,7 +172,7 @@ function start(robot) {
   function cacheMessage(msg) {
     return ensureCacheSize(msg.userId, CACHE_SIZE - 1).then(function() {
       return Q.all([
-        robot.brain.hset(CACHE_PREFIX + msg.userId, msg.key, msg.text),
+        robot.brain.hset(CACHE_PREFIX + msg.userId, msg.key, msg),
         robot.brain.lpush(CACHE_KEYS_PREFIX + msg.userId, msg.key)
       ]);
     });
@@ -213,7 +213,7 @@ function start(robot) {
     });
   }
 
-  robot.respond(/remember ([^\s]*) (.*)/i, function(msg) {
+  robot.respond(/remember ([^\s]+) (.*)/i, function(msg) {
     var username = msg.match[1];
     var text = msg.match[2];
 
@@ -224,7 +224,7 @@ function start(robot) {
             storeMessage(match),
             uncacheMessage(match)
           ]).then(function() {
-            msg.send("remembering " + messageToString(match.message));
+            msg.send("remembering " + messageToString(match));
           });
         }
         else if (users.length === 0) {
@@ -237,7 +237,7 @@ function start(robot) {
     });
   });
 
-  robot.respond(/forget ([^\s]*) (.*)/i, function(msg) {
+  robot.respond(/forget ([^\s]+) (.*)/i, function(msg) {
     var username = msg.match[1];
     var text = msg.match[2];
 
@@ -271,7 +271,7 @@ function start(robot) {
     }
 
     return users.then(function(users) {
-      if (!users || users.length === 0) {
+      if (username && (!users || users.length === 0)) {
         //username is optional, so include it in `text` if we don't find any users
         text = username + (text ? ' ' + text : '');
         users = null;
