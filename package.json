@@ -1,0 +1,30 @@
+{
+  "name": "brobbot-quote",
+  "version": "1.0.0",
+  "description": "brobbot script to remember quotes and retreive them later",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/b3nj4m/brobbot-quote"
+  },
+  "keywords": [
+    "brobbot"
+  ],
+  "author": "Ben Robbins <ben.robbins@gmail.com> (https://b3nj4m.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/b3nj4m/brobbot-quote/issues"
+  },
+  "peerDependencies": {
+    "brobbot": "3.x"
+  },
+  "dependencies": {
+    "underscore": "~1.7.0",
+    "natural": "~0.1.28",
+    "msgpack": "~0.2.4",
+    "q": "~1.1.2"
+  }
+}
