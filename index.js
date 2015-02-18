@@ -4,7 +4,6 @@
 // Dependencies:
 //   underscore: ~1.7.0
 //   natural: ~0.1.28
-//   msgpack: ~0.2.4
 //   q: ~1.1.2
 //
 // Configuration:
@@ -12,20 +11,12 @@
 //   BROBBOT_QUOTE_STORE_SIZE=N - Remember at most N messages for each user (default 100).
 //   BROBBOT_QUOTE_INIT_TIMEOUT=N - wait for N milliseconds for brain data to load from redis. (default 10000)
 //
-// Commands:
-//   brobbot remember <user> <text> - remember most recent message from <user> containing <text>
-//   brobbot forget <user> <text> - forget most recent remembered message from <user> containing <text>
-//   brobbot quote [<user>] [<text>] - quote a random remembered message that is from <user> and/or contains <text>
-//   brobbot quotemash [<user>] [<text>] - quote some random remembered messages that are from <user> and/or contain <text>
-//   brobbot <text>|<user>mash - quote some random remembered messages that from <user> or contain <text>
-//
 // Author:
 //   b3nj4m
 
 var crypto = require('crypto');
 var _ = require('underscore');
 var natural = require('natural');
-var msgpack = require('msgpack');
 var Q = require('q');
 
 var stemmer = natural.PorterStemmer;
@@ -106,6 +97,12 @@ function hash(text) {
 }
 
 function start(robot) {
+  robot.helpCommand('brobbot remember <user> <text>', 'remember most recent message from <user> containing <text>');
+  robot.helpCommand('brobbot forget <user> <text>', 'forget most recent remembered message from <user> containing <text>');
+  robot.helpCommand('brobbot quote [<user>] [<text>]', 'quote a random remembered message that is from <user> and/or contains <text>');
+  robot.helpCommand('brobbot quotemash [<user>] [<text>]', 'quote some random remembered messages that are from <user> and/or contain <text>');
+  robot.helpCommand('brobbot <text>|<user>mash', 'quote some random remembered messages that from <user> or contain <text>');
+
   function findStemMatches(keyPrefix, text, users, firstMatch) {
     var stems = uniqueStems(text);
 

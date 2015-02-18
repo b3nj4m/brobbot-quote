@@ -19,12 +19,11 @@
     "url": "https://github.com/b3nj4m/brobbot-quote/issues"
   },
   "peerDependencies": {
-    "brobbot": "3.x"
+    "brobbot": "4.x"
   },
   "dependencies": {
     "underscore": "~1.7.0",
     "natural": "~0.1.28",
-    "msgpack": "~0.2.4",
     "q": "~1.1.2"
   }
 }
