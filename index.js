@@ -327,7 +327,7 @@ function start(robot) {
   });
 
   robot.hear(/.*/, function(msg) {
-    if (!msg.isAddressedToBrobbot) {
+    if (!msg.message.isAddressedToBrobbot) {
       return cacheMessage({
         text: msg.message.text,
         userId: msg.message.user.id,
