@@ -292,7 +292,7 @@ function start(robot) {
     });
   });
 
-  robot.respond(/(quotemash( ([^\s]*))?( (.*))?)|((([^\s]*))mash)/i, function(msg) {
+  robot.respond(/(quotemash( ([^\s]*))?( (.*))?)|((([^\s]+))mash)/i, function(msg) {
     var username = msg.match[3] || msg.match[8] || '';
     var text = msg.match[5] || '';
     var limit = 10;
