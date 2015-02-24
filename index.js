@@ -242,7 +242,7 @@ function start(robot) {
       return findFirstStoredStemMatch(text, users).then(function(match) {
         if (match) {
           return unstoreMessage(match).then(function() {
-            msg.send("forgot " + messageToString(match.message));
+            msg.send("forgot " + messageToString(match));
           });
         }
         else if (users.length === 0) {
