@@ -108,11 +108,11 @@ function hash(text) {
 }
 
 function start(robot) {
-  robot.helpCommand('brobbot remember <user> <text>', 'remember most recent message from <user> containing <text>');
-  robot.helpCommand('brobbot forget <user> <text>', 'forget most recent remembered message from <user> containing <text>');
-  robot.helpCommand('brobbot quote [<user>] [<text>]', 'quote a random remembered message that is from <user> and/or contains <text>');
-  robot.helpCommand('brobbot quotemash [<user>] [<text>]', 'quote some random remembered messages that are from <user> and/or contain <text>');
-  robot.helpCommand('brobbot <text>|<user>mash', 'quote some random remembered messages that from <user> or contain <text>');
+  robot.helpCommand('brobbot remember `user` `text`', 'remember most recent message from `user` containing `text`');
+  robot.helpCommand('brobbot forget `user` `text`', 'forget most recent remembered message from `user` containing `text`');
+  robot.helpCommand('brobbot quote [`user`] [`text`]', 'quote a random remembered message that is from `user` and/or contains `text`');
+  robot.helpCommand('brobbot quotemash [`user`] [`text`]', 'quote some random remembered messages that are from `user` and/or contain `text`');
+  robot.helpCommand('brobbot `text`|`user`mash', 'quote some random remembered messages that from `user` or contain `text`');
 
   function findStemMatches(keyPrefix, text, users, firstMatch, keyListPrefix) {
     var stems = uniqueStems(text);
