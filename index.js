@@ -130,7 +130,7 @@ function start(robot) {
       var promises = _.map(keys, function(key) {
         var userId = key.replace(new RegExp('^' + keyPrefix), '');
 
-        return robot.brain.hvals(key).then(function(messages) {
+        return robot.brain.hgetall(key).then(function(messages) {
           var matchFn = matches.bind(this, stems, text);
 
           if (firstMatch && keyListPrefix) {
