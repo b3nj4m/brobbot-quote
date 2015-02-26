@@ -383,7 +383,7 @@ function start(robot) {
         text: msg.message.text,
         userId: msg.message.user.id,
         user: msg.message.user,
-        key: hash(msg.message.text)
+        key: hash((new Date()).getTime().toString() + ':' + msg.message.text)
       });
     }
   });
