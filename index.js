@@ -25,6 +25,7 @@ var CACHE_SIZE = process.env.BROBBOT_QUOTE_CACHE_SIZE ? parseInt(process.env.BRO
 var STORE_SIZE = process.env.BROBBOT_QUOTE_STORE_SIZE ? parseInt(process.env.BROBBOT_QUOTE_STORE_SIZE) : 100;
 var INIT_TIMEOUT = process.env.BROBBOT_QUOTE_INIT_TIMEOUT ? parseInt(process.env.BROBBOT_QUOTE_INIT_TIMEOUT) : 10000;
 var STORE_PREFIX = 'user:';
+var STORE_KEYS_PREFIX = 'user-keys:';
 var CACHE_PREFIX = 'cache-user:';
 var CACHE_KEYS_PREFIX = 'cache-keys:';
 
@@ -48,6 +49,16 @@ notFoundTmpls = _.map(notFoundTmpls, _.template);
 
 function randomItem(list) {
   return list[_.random(list.length - 1)];
+}
+
+function findWithOrderedKeys(collection, keys, predicate, context) {
+  context = context || this;
+
+  for (var i = 0; i < keys.length; i++) {
+    if (predicate.call(context, collection[keys[i]])) {
+      return collection[keys[i]];
+    }
+  }
 }
 
 //get random subset of items (mutates original list)
@@ -103,7 +114,7 @@ function start(robot) {
   robot.helpCommand('brobbot quotemash [<user>] [<text>]', 'quote some random remembered messages that are from <user> and/or contain <text>');
   robot.helpCommand('brobbot <text>|<user>mash', 'quote some random remembered messages that from <user> or contain <text>');
 
-  function findStemMatches(keyPrefix, text, users, firstMatch) {
+  function findStemMatches(keyPrefix, text, users, firstMatch, keyListPrefix) {
     var stems = uniqueStems(text);
 
     if (users) {
@@ -120,11 +131,20 @@ function start(robot) {
         var userId = key.replace(new RegExp('^' + keyPrefix), '');
 
         return robot.brain.hvals(key).then(function(messages) {
-          if (firstMatch) {
-            return [_.find(messages, matches.bind(this, stems, text))];
+          var matchFn = matches.bind(this, stems, text);
+
+          if (firstMatch && keyListPrefix) {
+            return robot.brain.lgetall(keyListPrefix + userId).then(function(messageKeys) {
+              if (messageKeys.length > 0) {
+                return [findWithOrderedKeys(messages, messageKeys, matchFn)];
+              }
+              else {
+                return _.filter(messages, matchFn);
+              }
+            });
           }
           else {
-            return _.filter(messages, matches.bind(this, stems, text));
+            return _.filter(messages, matchFn);
           }
         },
         function() {
@@ -138,9 +158,9 @@ function start(robot) {
     });
   }
 
-  function findFirstStemMatch(keyPrefix, text, users) {
-    return findStemMatches(keyPrefix, text, users, true).then(function(messages) {
-      return _.last(messages)
+  function findFirstStemMatch(keyPrefix, text, users, keyListPrefix) {
+    return findStemMatches(keyPrefix, text, users, true, keyListPrefix).then(function(messages) {
+      return _.first(messages)
     });
   }
 
@@ -149,11 +169,11 @@ function start(robot) {
   }
 
   function findFirstStoredStemMatch(text, users) {
-    return findFirstStemMatch(STORE_PREFIX, text, users);
+    return findFirstStemMatch(STORE_PREFIX, text, users, STORE_KEYS_PREFIX);
   }
 
   function findFirstCachedStemMatch(text, users) {
-    return findFirstStemMatch(CACHE_PREFIX, text, users);
+    return findFirstStemMatch(CACHE_PREFIX, text, users, CACHE_KEYS_PREFIX);
   }
 
   function storeMessage(msg) {
@@ -163,7 +183,36 @@ function start(robot) {
   }
 
   function unstoreMessage(msg) {
-    return robot.brain.hdel(STORE_PREFIX + msg.userId, msg.key);
+    return Q.all([
+      robot.brain.hdel(STORE_PREFIX + msg.userId, msg.key),
+      unstoreQuotedMessage(msg)
+    ]);
+  }
+
+  function ensureQuotedSize(userId, size) {
+    var userKey = STORE_KEYS_PREFIX + userId;
+
+    return robot.brain.llen(userKey).then(function(length) {
+      if (length > size) {
+        return robot.brain.lpop(userKey);
+      }
+    });
+  }
+
+  function storeQuotedMessage(msg) {
+    return ensureQuotedSize(msg.userId, CACHE_SIZE - 1).then(function() {
+      return robot.brain.lpush(STORE_KEYS_PREFIX + msg.userId, msg.key, msg);
+    });
+  }
+
+  function unstoreQuotedMessage(msg) {
+    return robot.brain.lrem(STORE_KEYS_PREFIX + msg.userId, msg.key);
+  }
+
+  function send(msg) {
+    var messages = _.rest(_.toArray(arguments));
+    msg.send.apply(msg, _.map(messages, messageToString));
+    return Q.all(_.map(messages, storeQuotedMessage));
   }
 
   function cacheMessage(msg) {
@@ -203,9 +252,11 @@ function start(robot) {
 
     return robot.brain.llen(userKey).then(function(length) {
       if (length > size) {
-        return robot.brain.lpop(userKey).then(function(key) {
-          return robot.brain.hdel(CACHE_PREFIX + userId, key);
-        });
+        return Q.all(_.times( length - size, function() {
+          return robot.brain.lpop(userKey).then(function(key) {
+            return robot.brain.hdel(CACHE_PREFIX + userId, key);
+          });
+        }));
       }
     });
   }
@@ -277,7 +328,7 @@ function start(robot) {
       return findStoredStemMatches(text, users).then(function(matches) {
         if (matches && matches.length > 0) {
           message = randomItem(matches);
-          msg.send(messageToString(message));
+          send(msg, message);
         }
         else if (users && users.length === 0) {
           msg.send(userNotFoundMessage(username));
@@ -314,7 +365,7 @@ function start(robot) {
 
       return findStoredStemMatches(text, users).then(function(matches) {
         if (matches && matches.length > 0) {
-          msg.send.apply(msg, _.map(randomItems(matches, limit), messageToString));
+          send.apply(this, [msg].concat(randomItems(matches, limit)));
         }
         else if (!text) {
           msg.send(emptyStoreMessage());
