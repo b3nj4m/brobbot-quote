@@ -140,7 +140,7 @@ function start(robot) {
 
   function findFirstStemMatch(keyPrefix, text, users) {
     return findStemMatches(keyPrefix, text, users, true).then(function(messages) {
-      return _.first(messages)
+      return _.last(messages)
     });
   }
 
