@@ -99,8 +99,12 @@ function textMatches(searchText, msg) {
   return msg.text.toLowerCase().indexOf(searchText.toLowerCase()) > -1;
 }
 
+function isWords(text) {
+  return /^[\w\s]+$/.test(text);
+}
+
 function matches(searchStems, searchText, msg) {
-  return searchText === '' || stemMatches(searchText, searchStems, msg) || textMatches(searchText, msg);
+  return searchText === '' || stemMatches(searchText, searchStems, msg) || (!isWords(searchText) && textMatches(searchText, msg));
 }
 
 function hash(text) {
