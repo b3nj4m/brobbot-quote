@@ -130,6 +130,7 @@ function start(robot) {
       keys = robot.brain.keys(keyPrefix);
     }
 
+    //TODO return user along with match
     return keys.then(function(keys) {
       var promises = _.map(keys, function(key) {
         var userId = key.replace(new RegExp('^' + keyPrefix), '');
@@ -257,7 +258,7 @@ function start(robot) {
     return robot.brain.llen(userKey).then(function(length) {
       if (length > size) {
         return Q.all(_.times( length - size, function() {
-          return robot.brain.lpop(userKey).then(function(key) {
+          return robot.brain.rpop(userKey).then(function(key) {
             return robot.brain.hdel(CACHE_PREFIX + userId, key);
           });
         }));
