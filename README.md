@@ -14,7 +14,8 @@ Brobbot: Alice: pizza is delicious!
 
 ### Matching
 
-It currently matches first with [natural](https://github.com/NaturalNode/natural)'s `PorterStemmer` to match words regardless of conjugation, tense, etc. It then looks for substring matches as well.
+It currently matches using [natural](https://github.com/NaturalNode/natural)'s `PorterStemmer` to match words regardless of conjugation, tense, etc.
+It looks for substring matches when the search string doesn't look like words (doesn't match `/^[\w\s]+$/`).
 
 ### Configuration:
 
