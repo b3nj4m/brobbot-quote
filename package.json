@@ -1,6 +1,6 @@
 {
   "name": "brobbot-quote",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "brobbot script to remember quotes and retreive them later",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,7 @@
     "url": "https://github.com/b3nj4m/brobbot-quote/issues"
   },
   "peerDependencies": {
-    "brobbot": "4.x"
+    "brobbot": "4.x - 5.x"
   },
   "dependencies": {
     "natural": "~0.1.28",
