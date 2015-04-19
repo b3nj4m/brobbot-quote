@@ -266,7 +266,7 @@ function start(robot) {
     });
   }
 
-  robot.respond(/remember ([^\s]+) (.*)/i, function(msg) {
+  robot.respond(/^remember ([^\s]+) (.*)/i, function(msg) {
     var username = msg.match[1];
     var text = msg.match[2];
 
@@ -290,7 +290,7 @@ function start(robot) {
     });
   });
 
-  robot.respond(/forget ([^\s]+) (.*)/i, function(msg) {
+  robot.respond(/^forget ([^\s]+) (.*)/i, function(msg) {
     var username = msg.match[1];
     var text = msg.match[2];
 
@@ -311,7 +311,7 @@ function start(robot) {
     });
   });
 
-  robot.respond(/quote($| )([^\s]*)?( (.*))?/i, function(msg) {
+  robot.respond(/^quote($| )([^\s]*)?( (.*))?/i, function(msg) {
     var username = msg.match[2];
     var text = msg.match[4] || '';
     var users;
@@ -348,7 +348,7 @@ function start(robot) {
     });
   });
 
-  robot.respond(/(quotemash( ([^\s]*))?( (.*))?)|((([^\s]+))mash)/i, function(msg) {
+  robot.respond(/^(quotemash( ([^\s]*))?( (.*))?)|((([^\s]+))mash)/i, function(msg) {
     var username = msg.match[3] || msg.match[8] || '';
     var text = msg.match[5] || '';
     var limit = 10;
