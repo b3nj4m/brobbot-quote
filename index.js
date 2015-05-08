@@ -134,8 +134,9 @@ function start(robot) {
   robot.helpCommand('brobbot forget `user` `text`', 'forget most recent remembered message from `user` containing `text`');
   robot.helpCommand('brobbot quote [`user`] [`text`]', 'quote a random remembered message that is from `user` and/or contains `text`');
   robot.helpCommand('brobbot quotemash [`user`] [`text`]', 'quote some random remembered messages that are from `user` and/or contain `text`');
-  robot.helpCommand('brobbot (`text` | `user`)mash', 'quote some random remembered messages that are from `user` or contain `text`');
-  robot.helpCommand('brobbot /`regex`/mash', 'quote some random remembered messages that matches `regex`');
+  robot.helpCommand('brobbot `user`mash', 'quote some random remembered messages that are from `user`');
+  robot.helpCommand('brobbot `text`mash', 'quote some random remembered messages that contain `text`');
+  robot.helpCommand('brobbot / `regex` /mash', 'quote some random remembered messages that matches `regex`');
 
   function findStemMatches(keyPrefix, text, users, firstMatch, keyListPrefix) {
     var stems = uniqueStems(text);
