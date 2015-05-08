@@ -122,7 +122,15 @@ function regexMatches(text, msg) {
 }
 
 function matches(searchStems, searchText, msg) {
-  return searchText === '' || (isRegex(searchText) && regexMatches(searchText, msg)) || stemMatches(searchText, searchStems, msg) || (!isWords(searchText) && textMatches(searchText, msg));
+  if (searchText === '') {
+    return true;
+  }
+  else if (isRegex(searchText)) {
+    return regexMatches(searchText, msg)
+  }
+  else {
+    return stemMatches(searchText, searchStems, msg) || (!isWords(searchText) && textMatches(searchText, msg));
+  }
 }
 
 function hash(text) {
