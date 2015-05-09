@@ -84,3 +84,11 @@ Quote some random remembered messages that are from `<user>` or contain `<text>`
 ```
 brobbot <text>|<user>mash
 ```
+
+#### Quotemash (regex form)
+
+Quote some random remembered messages that match `<regex>`.
+
+```
+brobbot /<regex>/mash
+```
