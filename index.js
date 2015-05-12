@@ -211,7 +211,10 @@ function start(robot) {
 
   function storeMessage(msg) {
     return ensureStoreSize(msg.userId, STORE_SIZE - 1).then(function() {
-      return robot.brain.hset(STORE_PREFIX + msg.userId, msg.key, msg);
+      return Q.all([
+        robot.brain.hset(STORE_PREFIX + msg.userId, msg.key, msg),
+        storeQuotedMessage(msg)
+      ]);
     });
   }
 
