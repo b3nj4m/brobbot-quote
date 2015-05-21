@@ -121,23 +121,42 @@ function regexMatches(text, msg) {
   }
 }
 
-function matches(users, searchStems, searchText, msg) {
+function stringMatches(searchText, searchStems, msg) {
+  return (isRegex(searchText) && regexMatches(searchText, msg)) || stemMatches(searchText, searchStems, msg) || (!isWords(searchText) && textMatches(searchText, msg));
+}
+
+function matches(username, userIds, searchStems, searchText, msg) {
+  if (username === '' && searchText === '') {
+    return true;
+  }
+
+  var userMatch = userIds && userIds.length > 0 && _.contains(userIds, msg.user.id);
+  if (searchText === '' && userMatch) {
+    return true;
+  }
+
   if (searchText === '') {
-    return true;
-  }
-  else if (users && users.length > 0 && _.contains(_.pluck(users, 'id'), msg.user.id)) {
-    return true;
-  }
-  else if (isRegex(searchText)) {
-    return regexMatches(searchText, msg)
+    return stringMatches(username, searchStems, msg);
   }
   else {
-    return stemMatches(searchText, searchStems, msg) || (!isWords(searchText) && textMatches(searchText, msg));
+    return userMatch && stringMatches(searchText, searchStems, msg);
   }
 }
 
 function hash(text) {
   return crypto.createHash('md5').update(text).digest('hex');
+}
+
+function handleFailure(msg, username, text, err) {
+  if (err === 'USER_NOT_FOUND') {
+    msg.send(userNotFoundMessage(username));
+  }
+  else if (text === '' && username === '') {
+    msg.send(emptyStoreMessage());
+  }
+  else {
+    msg.send(notFoundMessage(text));
+  }
 }
 
 function start(robot) {
@@ -149,73 +168,86 @@ function start(robot) {
   robot.helpCommand('brobbot `text`mash', 'quote some random remembered messages that contain `text`');
   robot.helpCommand('brobbot / `regex` /mash', 'quote some random remembered messages that matches `regex`');
 
-  function findStemMatches(keyPrefix, text, users, firstMatch, keyListPrefix) {
-    var stems = uniqueStems(text);
-    var userKeys;
+  function findStemMatches(keyPrefix, text, username, userRequired, firstMatch, keyListPrefix) {
+    return robot.brain.usersForFuzzyName(username).then(function(users) {
+      if (users.length === 0 && userRequired) {
+        //require a matching user when both username and search text are given
+        throw 'USER_NOT_FOUND';
+      }
 
-    if (users) {
-      userKeys = _.map(users, function(user) {
+      var stems = uniqueStems(text || username);
+      var userIds = _.pluck(users, 'id');
+
+      var userKeys = _.map(users, function(user) {
         return keyPrefix + user.id;
       });
-    }
-    else {
-      userKeys = []
-    }
 
-    //TODO should prolly maintain a set instead
-    var keys = robot.brain.keys(keyPrefix);
+      var keys;
+      if (userRequired) {
+        keys = Q(userKeys);
+      }
+      else {
+        //TODO should prolly maintain a set instead
+        keys = robot.brain.keys(keyPrefix).then(function(keys) {
+          return _.unique(userKeys.concat(keys));
+        });
+      }
 
-    //TODO return user along with match
-    return keys.then(function(keys) {
-      keys = _.unique(userKeys.concat(keys));
+      //TODO return user along with match
+      return keys.then(function(keys) {
+        var promises = _.map(keys, function(key) {
+          var userId = key.replace(new RegExp('^' + keyPrefix), '');
 
-      var promises = _.map(keys, function(key) {
-        var userId = key.replace(new RegExp('^' + keyPrefix), '');
+          return robot.brain.hgetall(key).then(function(messages) {
+            var matchFn = matches.bind(this, username, userIds, stems, text);
 
-        return robot.brain.hgetall(key).then(function(messages) {
-          var matchFn = matches.bind(this, users, stems, text);
+            if (firstMatch && keyListPrefix) {
+              return robot.brain.lgetall(keyListPrefix + userId).then(function(messageKeys) {
+                if (messageKeys.length > 0) {
+                  return [findWithOrderedKeys(messages, messageKeys, matchFn)];
+                }
+                else {
+                  return _.filter(messages, matchFn);
+                }
+              });
+            }
+            else {
+              return _.filter(messages, matchFn);
+            }
+          },
+          function() {
+            return null;
+          });
+        });
 
-          if (firstMatch && keyListPrefix) {
-            return robot.brain.lgetall(keyListPrefix + userId).then(function(messageKeys) {
-              if (messageKeys.length > 0) {
-                return [findWithOrderedKeys(messages, messageKeys, matchFn)];
-              }
-              else {
-                return _.filter(messages, matchFn);
-              }
-            });
-          }
-          else {
-            return _.filter(messages, matchFn);
-          }
-        },
-        function() {
-          return null;
+        return Q.all(promises).then(function(results) {
+          return _.flatten(_.compact(results));
         });
       });
-
-      return Q.all(promises).then(function(results) {
-        return _.flatten(_.compact(results));
-      });
+    }).then(function(messages) {
+      if (messages.length === 0) {
+        throw 'NO_MATCHES';
+      }
+      return messages;
     });
   }
 
-  function findFirstStemMatch(keyPrefix, text, users, keyListPrefix) {
-    return findStemMatches(keyPrefix, text, users, true, keyListPrefix).then(function(messages) {
+  function findFirstStemMatch(keyPrefix, text, username, userRequired, keyListPrefix) {
+    return findStemMatches(keyPrefix, text, username, userRequired, true, keyListPrefix).then(function(messages) {
       return _.first(messages)
     });
   }
 
-  function findStoredStemMatches(text, users) {
-    return findStemMatches(STORE_PREFIX, text, users);
+  function findStoredStemMatches(text, username, userRequired) {
+    return findStemMatches(STORE_PREFIX, text, username, userRequired);
   }
 
-  function findFirstStoredStemMatch(text, users) {
-    return findFirstStemMatch(STORE_PREFIX, text, users, STORE_KEYS_PREFIX);
+  function findFirstStoredStemMatch(text, username, userRequired) {
+    return findFirstStemMatch(STORE_PREFIX, text, username, userRequired, STORE_KEYS_PREFIX);
   }
 
-  function findFirstCachedStemMatch(text, users) {
-    return findFirstStemMatch(CACHE_PREFIX, text, users, CACHE_KEYS_PREFIX);
+  function findFirstCachedStemMatch(text, username, userRequired) {
+    return findFirstStemMatch(CACHE_PREFIX, text, username, userRequired, CACHE_KEYS_PREFIX);
   }
 
   function storeMessage(msg) {
@@ -310,120 +342,45 @@ function start(robot) {
     var username = msg.match[1];
     var text = msg.match[2];
 
-    return robot.brain.usersForFuzzyName(username).then(function(users) {
-      return findFirstCachedStemMatch(text, users).then(function(match) {
-        if (match) {
-          return Q.all([
-            storeMessage(match),
-            uncacheMessage(match)
-          ]).then(function() {
-            msg.send("remembering " + messageToString(match));
-          });
-        }
-        else if (users.length === 0) {
-          msg.send(userNotFoundMessage(username));
-        }
-        else {
-          msg.send(notFoundMessage(text));
-        }
+    return findFirstCachedStemMatch(text, username, true).then(function(match) {
+      return Q.all([
+        storeMessage(match),
+        uncacheMessage(match)
+      ]).then(function() {
+        msg.send("remembering " + messageToString(match));
       });
-    });
+    }, handleFailure.bind(this, msg, username, text));
   });
 
   robot.respond(/^forget ([^\s]+) (.*)/i, function(msg) {
     var username = msg.match[1];
     var text = msg.match[2];
 
-    return robot.brain.usersForFuzzyName(username).then(function(users) {
-      return findFirstStoredStemMatch(text, users).then(function(match) {
-        if (match) {
-          return unstoreMessage(match).then(function() {
-            msg.send("forgot " + messageToString(match));
-          });
-        }
-        else if (users.length === 0) {
-          msg.send(userNotFoundMessage(username));
-        }
-        else {
-          msg.send(notFoundMessage(text));
-        }
+    return findFirstStoredStemMatch(text, username, true).then(function(match) {
+      return unstoreMessage(match).then(function() {
+        msg.send("forgot " + messageToString(match));
       });
-    });
+    }, handleFailure.bind(this, msg, username, text));
   });
 
   robot.respond(/^quote($| )([^\s]*)?( (.*))?/i, function(msg) {
     var username = msg.match[2];
     var text = msg.match[4] || '';
-    var users;
 
-    if (username) {
-      users = robot.brain.usersForFuzzyName(username);
-    }
-    else {
-      users = Q(null);
-    }
-
-    return users.then(function(users) {
-      if (username && (!users || users.length === 0)) {
-        //username is optional, so include it in `text` if we don't find any users
-        text = username + (text ? ' ' + text : '');
-        users = null;
-      }
-
-      return findStoredStemMatches(text, users).then(function(matches) {
-        if (matches && matches.length > 0) {
-          message = randomItem(matches);
-          send(msg, message);
-        }
-        else if (users && users.length === 0) {
-          msg.send(userNotFoundMessage(username));
-        }
-        else if (!text) {
-          msg.send(emptyStoreMessage());
-        }
-        else {
-          msg.send(notFoundMessage(text));
-        }
-      });
-    });
+    return findStoredStemMatches(text, username).then(function(matches) {
+      message = randomItem(matches);
+      send(msg, message);
+    }, handleFailure.bind(this, msg, username, text));
   });
 
   robot.respond(/^(quotemash( ([^\s]*))?( (.*))?)|((([^\s]+))mash)/i, function(msg) {
     var username = msg.match[3] || msg.match[8] || '';
     var text = msg.match[5] || '';
     var limit = 10;
-    var users;
 
-    if (username) {
-      users = robot.brain.usersForFuzzyName(username);
-    }
-    else {
-      users = Q(null);
-    }
-
-    return users.then(function(users) {
-      if (!users || users.length === 0) {
-        //username is optional, so include it in `text` if we don't find any users
-        text = username + (text ? ' ' + text : '');
-        users = null;
-      }
-
-      if (!text) {
-        text = username;
-      }
-
-      return findStoredStemMatches(text, users).then(function(matches) {
-        if (matches && matches.length > 0) {
-          send.apply(this, [msg].concat(randomItems(matches, limit)));
-        }
-        else if (!text) {
-          msg.send(emptyStoreMessage());
-        }
-        else {
-          msg.send(notFoundMessage(text));
-        }
-      });
-    });
+    return findStoredStemMatches(text, username).then(function(matches) {
+      send.apply(this, [msg].concat(randomItems(matches, limit)));
+    }, handleFailure.bind(this, msg, username, text));
   });
 
   robot.hear(/.*/, function(msg) {
