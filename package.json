@@ -1,6 +1,6 @@
 {
   "name": "brobbot-quote",
-  "version": "2.2.4",
+  "version": "2.3.0",
   "description": "brobbot script to remember quotes and retreive them later",
   "main": "index.js",
   "scripts": {
