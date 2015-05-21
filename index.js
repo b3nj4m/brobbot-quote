@@ -121,8 +121,11 @@ function regexMatches(text, msg) {
   }
 }
 
-function matches(searchStems, searchText, msg) {
+function matches(users, searchStems, searchText, msg) {
   if (searchText === '') {
+    return true;
+  }
+  else if (users && users.length > 0 && _.contains(_.pluck(users, 'id'), msg.user.id)) {
     return true;
   }
   else if (isRegex(searchText)) {
@@ -148,23 +151,29 @@ function start(robot) {
 
   function findStemMatches(keyPrefix, text, users, firstMatch, keyListPrefix) {
     var stems = uniqueStems(text);
+    var userKeys;
 
     if (users) {
-      keys = Q(_.map(users, function(user) {
+      userKeys = _.map(users, function(user) {
         return keyPrefix + user.id;
-      }));
+      });
     }
     else {
-      keys = robot.brain.keys(keyPrefix);
+      userKeys = []
     }
+
+    //TODO should prolly maintain a set instead
+    var keys = robot.brain.keys(keyPrefix);
 
     //TODO return user along with match
     return keys.then(function(keys) {
+      keys = _.unique(userKeys.concat(keys));
+
       var promises = _.map(keys, function(key) {
         var userId = key.replace(new RegExp('^' + keyPrefix), '');
 
         return robot.brain.hgetall(key).then(function(messages) {
-          var matchFn = matches.bind(this, stems, text);
+          var matchFn = matches.bind(this, users, stems, text);
 
           if (firstMatch && keyListPrefix) {
             return robot.brain.lgetall(keyListPrefix + userId).then(function(messageKeys) {
@@ -397,6 +406,10 @@ function start(robot) {
         //username is optional, so include it in `text` if we don't find any users
         text = username + (text ? ' ' + text : '');
         users = null;
+      }
+
+      if (!text) {
+        text = username;
       }
 
       return findStoredStemMatches(text, users).then(function(matches) {
