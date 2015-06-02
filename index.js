@@ -155,7 +155,7 @@ function handleFailure(msg, username, text, err) {
     msg.send(emptyStoreMessage());
   }
   else {
-    msg.send(notFoundMessage(text));
+    msg.send(notFoundMessage(text || username));
   }
 }
 
