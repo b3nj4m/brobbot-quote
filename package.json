@@ -19,7 +19,7 @@
     "url": "https://github.com/b3nj4m/brobbot-quote/issues"
   },
   "peerDependencies": {
-    "brobbot": "4.x - 5.x"
+    "brobbot": "6.x"
   },
   "dependencies": {
     "natural": "~0.1.28",
