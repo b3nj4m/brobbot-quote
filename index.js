@@ -229,7 +229,7 @@ function start(robot) {
         });
 
         return Q.all(promises).then(function(results) {
-          return _.flatten(_.compact(results));
+          return _.compact(_.flatten(results));
         });
       });
     }).then(function(messages) {
