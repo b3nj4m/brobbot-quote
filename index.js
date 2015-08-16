@@ -9,7 +9,8 @@
 // Configuration:
 //   BROBBOT_QUOTE_CACHE_SIZE=N - Cache the last N messages for each user for potential remembrance (default 25).
 //   BROBBOT_QUOTE_STORE_SIZE=N - Remember at most N messages for each user (default 100).
-//   BROBBOT_QUOTE_INIT_TIMEOUT=N - wait for N milliseconds for brain data to load from redis. (default 10000)
+//   BROBBOT_QUOTE_INIT_TIMEOUT=N - wait for N milliseconds for brain data to load from redis. (default 10000).
+//   BROBBOT_QUOTE_SUBSTRING_MATCHING=true|false - whether to include substring matches when searching for quotes (default true).
 //
 // Author:
 //   b3nj4m
@@ -24,6 +25,7 @@ var stemmer = natural.PorterStemmer;
 var CACHE_SIZE = process.env.BROBBOT_QUOTE_CACHE_SIZE ? parseInt(process.env.BROBBOT_QUOTE_CACHE_SIZE) : 25;
 var STORE_SIZE = process.env.BROBBOT_QUOTE_STORE_SIZE ? parseInt(process.env.BROBBOT_QUOTE_STORE_SIZE) : 100;
 var INIT_TIMEOUT = process.env.BROBBOT_QUOTE_INIT_TIMEOUT ? parseInt(process.env.BROBBOT_QUOTE_INIT_TIMEOUT) : 10000;
+var SUBSTRING_MATCHING = process.env.BROBBOT_QUOTE_SUBSTRING_MATCHING ? process.env.BROBBOT_QUOTE_SUBSTRING_MATCHING === 'true' : true;
 var STORE_PREFIX = 'user:';
 var STORE_KEYS_PREFIX = 'user-keys:';
 var CACHE_PREFIX = 'cache-user:';
@@ -130,7 +132,7 @@ function regexMatches(text, msg) {
 }
 
 function stringMatches(searchText, searchStems, msg) {
-  return (isRegex(searchText) && regexMatches(searchText, msg)) || stemMatches(searchText, searchStems, msg) || (!isWords(searchText) && textMatches(searchText, msg));
+  return (isRegex(searchText) && regexMatches(searchText, msg)) || stemMatches(searchText, searchStems, msg) || ((SUBSTRING_MATCHING || !isWords(searchText)) && textMatches(searchText, msg));
 }
 
 function matches(username, userIds, searchStems, searchText, msg) {

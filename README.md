@@ -15,9 +15,17 @@ Brobbot: Alice: pizza is delicious!
 ### Matching
 
 It currently matches using [natural](https://github.com/NaturalNode/natural)'s `PorterStemmer` to match words regardless of conjugation, tense, etc.
-It looks for substring matches when the search string doesn't look like words (doesn't match `/^[\w\s]+$/`).
+It looks for substring matches when the search string doesn't look like words (doesn't match `/^[\w\s]+$/`) or `BROBBOT_QUOTE_SUBSTRING_MATCHING=true`.
 
 ### Configuration:
+
+#### Substring matching
+
+Include substring matches as well as stem matches when searching for quotes.
+
+```
+BROBBOT_QUOTE_SUBSTRING_MATCHING=true|flase
+```
 
 #### Cache size
 
