@@ -28,6 +28,8 @@ var INIT_TIMEOUT = process.env.BROBBOT_QUOTE_INIT_TIMEOUT ? parseInt(process.env
 var SUBSTRING_MATCHING = process.env.BROBBOT_QUOTE_SUBSTRING_MATCHING ? process.env.BROBBOT_QUOTE_SUBSTRING_MATCHING === 'true' : true;
 var STORE_PREFIX = 'user:';
 var STORE_KEYS_PREFIX = 'user-keys:';
+var STORE_USER_IDS = 'user-ids';
+var CACHE_USER_IDS = 'cache-user-ids';
 var CACHE_PREFIX = 'cache-user:';
 var CACHE_KEYS_PREFIX = 'cache-keys:';
 
@@ -178,7 +180,18 @@ function start(robot) {
   robot.helpCommand('brobbot `text`mash', 'quote some random remembered messages that contain `text`');
   robot.helpCommand('brobbot / `regex` /mash', 'quote some random remembered messages that matches `regex`');
 
-  function findStemMatches(keyPrefix, text, username, userRequired, firstMatch, keyListPrefix) {
+  //migrate data to 4.0.0
+  robot.brain.exists(STORE_USER_IDS).then(function(exists) {
+    if (!exists) {
+      return robot.brain.keys(STORE_PREFIX).then(function(keys) {
+        return Q.all(_.map(keys, function(key) {
+          return robot.brain.sadd(STORE_USER_IDS, key.replace(STORE_PREFIX, ''));
+        }));
+      });
+    }
+  });
+
+  function findStemMatches(keyPrefix, userIdsKey, text, username, userRequired, firstMatch, keyListPrefix) {
     return robot.brain.usersForFuzzyName(username).then(function(users) {
       if (users.length === 0 && userRequired) {
         //require a matching user when both username and search text are given
@@ -197,8 +210,10 @@ function start(robot) {
         keys = Q(userKeys);
       }
       else {
-        //TODO should prolly maintain a set instead
-        keys = robot.brain.keys(keyPrefix).then(function(keys) {
+        keys = robot.brain.smembers(userIdsKey).then(function(ids) {
+          var keys = _.map(ids, function(id) {
+            return keyPrefix + id;
+          });
           return _.unique(userKeys.concat(keys));
         });
       }
@@ -242,28 +257,29 @@ function start(robot) {
     });
   }
 
-  function findFirstStemMatch(keyPrefix, text, username, userRequired, keyListPrefix) {
-    return findStemMatches(keyPrefix, text, username, userRequired, true, keyListPrefix).then(function(messages) {
-      return _.first(messages)
+  function findFirstStemMatch(keyPrefix, userIdsKey, text, username, userRequired, keyListPrefix) {
+    return findStemMatches(keyPrefix, userIdsKey, text, username, userRequired, true, keyListPrefix).then(function(messages) {
+      return _.first(messages);
     });
   }
 
   function findStoredStemMatches(text, username, userRequired) {
-    return findStemMatches(STORE_PREFIX, text, username, userRequired);
+    return findStemMatches(STORE_PREFIX, STORE_USER_IDS, text, username, userRequired);
   }
 
   function findFirstStoredStemMatch(text, username, userRequired) {
-    return findFirstStemMatch(STORE_PREFIX, text, username, userRequired, STORE_KEYS_PREFIX);
+    return findFirstStemMatch(STORE_PREFIX, STORE_USER_IDS, text, username, userRequired, STORE_KEYS_PREFIX);
   }
 
   function findFirstCachedStemMatch(text, username, userRequired) {
-    return findFirstStemMatch(CACHE_PREFIX, text, username, userRequired, CACHE_KEYS_PREFIX);
+    return findFirstStemMatch(CACHE_PREFIX, CACHE_USER_IDS, text, username, userRequired, CACHE_KEYS_PREFIX);
   }
 
   function storeMessage(msg) {
     return ensureStoreSize(msg.userId, STORE_SIZE - 1).then(function() {
       return Q.all([
         robot.brain.hset(STORE_PREFIX + msg.userId, msg.key, msg),
+        robot.brain.sadd(STORE_USER_IDS, msg.userId),
         storeQuotedMessage(msg)
       ]);
     });
@@ -306,6 +322,7 @@ function start(robot) {
     return ensureCacheSize(msg.userId, CACHE_SIZE - 1).then(function() {
       return Q.all([
         robot.brain.hset(CACHE_PREFIX + msg.userId, msg.key, msg),
+        robot.brain.sadd(CACHE_USER_IDS, msg.userId),
         robot.brain.lpush(CACHE_KEYS_PREFIX + msg.userId, msg.key)
       ]);
     });
