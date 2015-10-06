@@ -125,7 +125,7 @@ function isRegex(text) {
 function regexMatches(text, msg) {
   var regex;
   try {
-    regex = new RegExp(text.replace(regexExtract, '$1'));
+    regex = new RegExp(text.replace(regexExtract, '$1'), 'i');
     return regex.test(msg.text);
   }
   catch (err) {
