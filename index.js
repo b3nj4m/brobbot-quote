@@ -134,7 +134,10 @@ function regexMatches(text, msg) {
 }
 
 function stringMatches(searchText, searchStems, msg) {
-  return (isRegex(searchText) && regexMatches(searchText, msg)) || stemMatches(searchText, searchStems, msg) || ((SUBSTRING_MATCHING || !isWords(searchText)) && textMatches(searchText, msg));
+  if (isRegex(searchText)) {
+    return regexMatches(searchText, msg);
+  }
+  return stemMatches(searchText, searchStems, msg) || ((SUBSTRING_MATCHING || !isWords(searchText)) && textMatches(searchText, msg));
 }
 
 function matches(username, userIds, searchStems, searchText, msg) {
